@@ -309,7 +309,9 @@ def init_game(name_level, map_level):
                 self.goto(move_to_x, move_to_y)
             else:
                 self.direction = random.choice(["up", "down", "left", "right"])
-            turtle.ontimer(self.move, t = random.randint(100, 300))
+            
+            # Tăng thời gian chờ để quái vật di chuyển chậm hơn
+            turtle.ontimer(self.move, t=random.randint(300, 500))
 
         def destroy(self):
             self.goto(2000, 2000)

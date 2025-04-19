@@ -1,3 +1,7 @@
+# game_constants.py
+import random_map_generator as rmg
+
+# Các bản đồ mặc định
 map_easy = [
     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
     "XP  XXXXXXXE         XXXXXX      XXXXXX",
@@ -84,6 +88,13 @@ map_hard = [
     "X   X X   XXXX        EXXXXX         HX",
     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ]
+
+# Hàm lấy bản đồ ngẫu nhiên
+def get_random_map(level_type):
+    return rmg.generate_map(level_type)
+
+# Biến kiểm soát: True để sử dụng bản đồ ngẫu nhiên, False để sử dụng bản đồ cố định
+use_random_maps = True
 
 def show_main_menu():
     # Được định nghĩa trong main.py
