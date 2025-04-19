@@ -72,16 +72,27 @@ def generate_random_maze_dfs(width, height, difficulty):
                 count += 1
         return count >= 2
 
+    # Kiểm tra ô có gần quái vật khác không
+    def is_far_from_other_monsters(x, y):
+        for dy in range(-1, 2):
+            for dx in range(-1, 2):
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < width and 0 <= ny < height:
+                    if maze[ny][nx] == 'E':
+                        return False
+        return True
+
     # Đặt quái vật
     monster_count = 0
     safe_cells = [pos for pos in empty_cells if is_safe_for_monster(*pos)]
+    random.shuffle(safe_cells)  # trộn ngẫu nhiên để chọn thứ tự
     while monster_count < num_monsters and safe_cells:
-        pos = random.choice(safe_cells)
+        pos = safe_cells.pop()
         x, y = pos
-        maze[y][x] = 'E'
-        empty_cells.remove(pos)
-        safe_cells.remove(pos)
-        monster_count += 1
+        if is_far_from_other_monsters(x, y):
+            maze[y][x] = 'E'
+            empty_cells.remove(pos)
+            monster_count += 1
 
     # Đặt kho báu
     treasure_count = 0
@@ -92,21 +103,26 @@ def generate_random_maze_dfs(width, height, difficulty):
         empty_cells.remove(pos)
         treasure_count += 1
         
-         # Đục thêm lỗ gần quái vật để dễ né
+    # Đục thêm lỗ gần quái vật để dễ né
     def dig_near_monsters(extra_digs=3):
-        for y in range(height):
-            for x in range(width):
+        for y in range(1, height - 1):  # bỏ biên trên/dưới
+            for x in range(1, width - 1):  # bỏ biên trái/phải
                 if maze[y][x] == 'E':
                     directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
                     random.shuffle(directions)
                     dug = 0
                     for dx, dy in directions:
                         nx, ny = x + dx, y + dy
-                        if 0 <= nx < width and 0 <= ny < height and maze[ny][nx] == 'X':
+                        if (
+                            1 <= nx < width - 1 and
+                            1 <= ny < height - 1 and
+                            maze[ny][nx] == 'X'
+                        ):
                             maze[ny][nx] = ' '
                             dug += 1
                         if dug >= extra_digs:
                             break
+
 
     # Đục thêm lỗ tùy theo độ khó
     if difficulty == "easy":
