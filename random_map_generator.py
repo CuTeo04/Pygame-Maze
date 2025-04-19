@@ -155,3 +155,4 @@ def generate_map(level_type):
         height = 30
 
     return generate_random_maze_dfs(width, height, level_type)
+####################################
