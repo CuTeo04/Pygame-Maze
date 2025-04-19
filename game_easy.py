@@ -89,24 +89,36 @@ def init_game(name_level, map_level):
             # Lấy vị trí hiện tại của người chơi
             start_pos = (player.xcor(), player.ycor())
             
-            # Chọn đích đến (trong trường hợp này là công chúa)
+            # Kiểm tra xem còn kho báu không
+            if treasures:
+                # Nếu còn kho báu, tìm kho báu gần nhất
+                nearest_treasure = None
+                min_distance = float('inf')
+                
+                for treasure in treasures:
+                    end_pos = (treasure.xcor(), treasure.ycor())
+                    # Tính khoảng cách Manhattan
+                    distance = abs(start_pos[0] - end_pos[0]) + abs(start_pos[1] - end_pos[1])
+                    if distance < min_distance:
+                        min_distance = distance
+                        nearest_treasure = treasure
+                
+                if nearest_treasure:
+                    end_pos = (nearest_treasure.xcor(), nearest_treasure.ycor())
+                    path = astar.astar(map_level, start_pos, end_pos, walls)
+                    if path:
+                        # Hiển thị đường đi đến kho báu gần nhất
+                        show_path(path)
+                        return
+            
+            # Nếu không còn kho báu hoặc không tìm được đường đến kho báu nào,
+            # tìm đường đến công chúa
             if princess_position:
-                # Tìm đường đi đến công chúa
                 path = astar.astar(map_level, start_pos, princess_position, walls)
                 if path:
-                    # Hiển thị đường đi
+                    # Hiển thị đường đi đến công chúa
                     show_path(path)
                     return
-            
-            # Nếu không có đường đi đến công chúa hoặc chưa tìm thấy vị trí công chúa,
-            # thử tìm đường đi đến kho báu gần nhất
-            for treasure in treasures:
-                end_pos = (treasure.xcor(), treasure.ycor())
-                path = astar.astar(map_level, start_pos, end_pos, walls)
-                if path:
-                    # Hiển thị đường đi
-                    show_path(path)
-                    break
 
     # Hàm để hiển thị đường đi
     def show_path(path):
