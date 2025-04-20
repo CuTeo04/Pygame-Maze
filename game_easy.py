@@ -2,7 +2,7 @@ import turtle
 import math
 import random
 from game_constants import *
-import astar
+import bfs  # Thay thế import astar bằng import bfs
 
 def init_game(name_level, map_level):
     screen = turtle.Screen()
@@ -47,6 +47,7 @@ def init_game(name_level, map_level):
     monsters = []
     path_dots = []  # Danh sách các điểm đánh dấu đường đi
     princess_position = None  # Vị trí của công chúa
+    preloaded_paths = {}  # Dictionary để lưu trữ các đường đi đã tải trước
 
     #show hp
     def show_hp(hp):
@@ -97,15 +98,37 @@ def init_game(name_level, map_level):
                 
                 for treasure in treasures:
                     end_pos = (treasure.xcor(), treasure.ycor())
-                    # Tính khoảng cách Manhattan
-                    distance = abs(start_pos[0] - end_pos[0]) + abs(start_pos[1] - end_pos[1])
-                    if distance < min_distance:
-                        min_distance = distance
-                        nearest_treasure = treasure
+                    # Tìm đường đi từ preloaded_paths
+                    if end_pos in preloaded_paths:
+                        if start_pos in preloaded_paths[end_pos]:
+                            path = preloaded_paths[end_pos][start_pos]
+                            if path:
+                                # Đảo ngược đường đi vì chúng ta đang đi từ kho báu đến người chơi
+                                path = path[::-1]
+                                distance = len(path)
+                                if distance < min_distance:
+                                    min_distance = distance
+                                    nearest_treasure = treasure
+                
+                if not nearest_treasure:
+                    # Nếu không có trong preloaded_paths, tính toán khoảng cách Manhattan
+                    for treasure in treasures:
+                        end_pos = (treasure.xcor(), treasure.ycor())
+                        distance = abs(start_pos[0] - end_pos[0]) + abs(start_pos[1] - end_pos[1])
+                        if distance < min_distance:
+                            min_distance = distance
+                            nearest_treasure = treasure
                 
                 if nearest_treasure:
                     end_pos = (nearest_treasure.xcor(), nearest_treasure.ycor())
-                    path = astar.astar(map_level, start_pos, end_pos, walls)
+                    # Kiểm tra nếu đường đi đã được preload
+                    if end_pos in preloaded_paths and start_pos in preloaded_paths[end_pos]:
+                        path = preloaded_paths[end_pos][start_pos]
+                        path = path[::-1]  # Đảo ngược vì preload từ kho báu đến người chơi
+                    else:
+                        # Tính toán đường đi mới nếu chưa được preload
+                        path = bfs.bfs(map_level, start_pos, end_pos, walls)
+                    
                     if path:
                         # Hiển thị đường đi đến kho báu gần nhất
                         show_path(path)
@@ -114,7 +137,14 @@ def init_game(name_level, map_level):
             # Nếu không còn kho báu hoặc không tìm được đường đến kho báu nào,
             # tìm đường đến công chúa
             if princess_position:
-                path = astar.astar(map_level, start_pos, princess_position, walls)
+                # Kiểm tra nếu đường đi đã được preload
+                if princess_position in preloaded_paths and start_pos in preloaded_paths[princess_position]:
+                    path = preloaded_paths[princess_position][start_pos]
+                    path = path[::-1]  # Đảo ngược vì preload từ công chúa đến người chơi
+                else:
+                    # Tính toán đường đi mới nếu chưa được preload
+                    path = bfs.bfs(map_level, start_pos, princess_position, walls)
+                
                 if path:
                     # Hiển thị đường đi đến công chúa
                     show_path(path)
@@ -340,6 +370,36 @@ def init_game(name_level, map_level):
                     princess_position = (position_x, position_y)
                     princess.stamp()
 
+    # Thêm hàm preload đường đi
+    def preload_all_paths():
+        global preloaded_paths
+
+        # Bật chế độ thủ công cập nhật
+        turtle.tracer(0, 0)
+
+        # Tạo turtle hiển thị thông báo
+        loading_turtle = turtle.Turtle()
+        loading_turtle.hideturtle()
+        loading_turtle.penup()
+        loading_turtle.goto(0, 0)  # giữa màn hình
+        loading_turtle.color("red")  # màu đỏ
+        loading_turtle.write("Đang load game...", align="center", font=("Arial", 28, "bold"))
+
+        # Cập nhật màn hình ngay
+        turtle.update()
+
+        # --- Bắt đầu preload ---
+        treasures_positions = [(t.xcor(), t.ycor()) for t in treasures]
+        princess_position = (princess.xcor(), princess.ycor())
+        preloaded_paths = bfs.preload_paths(map_level, walls, treasures_positions, princess_position)
+
+        # --- Khi preload xong ---
+        loading_turtle.clear()
+        turtle.update()
+
+    # Bật lại chế độ tự động nếu cần
+    turtle.tracer(1, 10)
+
     #create instance
     pen = Pen()
     player = Player()
@@ -356,10 +416,15 @@ def init_game(name_level, map_level):
     # Thêm phím tắt để tự động tìm đường
     turtle.onkey(lambda: find_path_button.find_path(0, 0), "f")
     # Thêm phím tắt để tự động di chuyển theo đường đi
-    turtle.onkey(lambda: player.follow_path(astar.astar(map_level, (player.xcor(), player.ycor()), princess_position, walls)), "a")
+    turtle.onkey(lambda: player.follow_path(bfs.bfs(map_level, (player.xcor(), player.ycor()), princess_position, walls)), "a")
+    # Thêm phím tắt để preload đường đi
+    turtle.onkey(preload_all_paths, "p")
 
     #set up level
     setup_maze(map_level)
+    
+    # Tải trước tất cả đường đi sau khi thiết lập mê cung
+    turtle.ontimer(preload_all_paths, 1000)  # Chờ 1 giây để game hiển thị xong trước khi tính toán
 
     #run monster
     for monster in monsters:
