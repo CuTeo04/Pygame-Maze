@@ -1,8 +1,7 @@
 import turtle
-import time
 import game_easy
-import game_constants  # Thay vì import *
-import random_map_generator  # Import module mới
+import game_constants 
+
 
 # Cập nhật hàm main() trong file main.py
 def main():

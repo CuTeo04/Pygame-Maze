@@ -1,5 +1,5 @@
 # game_constants.py
-import random_map_generator as rmg
+import random_map_dfs as rand_map
 
 # Các bản đồ mặc định
 map_easy = [
@@ -91,7 +91,7 @@ map_hard = [
 
 # Hàm lấy bản đồ ngẫu nhiên
 def get_random_map(level_type):
-    return rmg.generate_map(level_type)
+    return rand_map.generate_map(level_type)
 
 # Biến kiểm soát: True để sử dụng bản đồ ngẫu nhiên, False để sử dụng bản đồ cố định
 use_random_maps = True

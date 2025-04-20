@@ -2,7 +2,7 @@ import turtle
 import math
 import random
 from game_constants import *
-import bfs  # Thay thế import astar bằng import bfs
+import bfs  
 
 def init_game(name_level, map_level):
     screen = turtle.Screen()
@@ -56,7 +56,7 @@ def init_game(name_level, map_level):
         turtle.penup()
         turtle.goto(380, 305)
         style = ('Courier', 20, 'bold')
-        turtle.write("HP: {0}".format(hp), font=style, align='center')
+        turtle.write("Score: {0}".format(hp), font=style, align='center')
         turtle.hideturtle()
 
     #create logo teky
@@ -90,65 +90,82 @@ def init_game(name_level, map_level):
             # Lấy vị trí hiện tại của người chơi
             start_pos = (player.xcor(), player.ycor())
             
-            # Kiểm tra xem còn kho báu không
-            if treasures:
-                # Nếu còn kho báu, tìm kho báu gần nhất
-                nearest_treasure = None
-                min_distance = float('inf')
-                
-                for treasure in treasures:
-                    end_pos = (treasure.xcor(), treasure.ycor())
-                    # Tìm đường đi từ preloaded_paths
-                    if end_pos in preloaded_paths:
-                        if start_pos in preloaded_paths[end_pos]:
-                            path = preloaded_paths[end_pos][start_pos]
-                            if path:
-                                # Đảo ngược đường đi vì chúng ta đang đi từ kho báu đến người chơi
-                                path = path[::-1]
-                                distance = len(path)
-                                if distance < min_distance:
-                                    min_distance = distance
-                                    nearest_treasure = treasure
-                
-                if not nearest_treasure:
-                    # Nếu không có trong preloaded_paths, tính toán khoảng cách Manhattan
-                    for treasure in treasures:
-                        end_pos = (treasure.xcor(), treasure.ycor())
-                        distance = abs(start_pos[0] - end_pos[0]) + abs(start_pos[1] - end_pos[1])
-                        if distance < min_distance:
-                            min_distance = distance
-                            nearest_treasure = treasure
-                
-                if nearest_treasure:
-                    end_pos = (nearest_treasure.xcor(), nearest_treasure.ycor())
-                    # Kiểm tra nếu đường đi đã được preload
-                    if end_pos in preloaded_paths and start_pos in preloaded_paths[end_pos]:
-                        path = preloaded_paths[end_pos][start_pos]
-                        path = path[::-1]  # Đảo ngược vì preload từ kho báu đến người chơi
-                    else:
-                        # Tính toán đường đi mới nếu chưa được preload
-                        path = bfs.bfs(map_level, start_pos, end_pos, walls)
-                    
-                    if path:
-                        # Hiển thị đường đi đến kho báu gần nhất
-                        show_path(path)
-                        return
+            # Dictionary lưu các đường đi tìm được và chi phí của chúng
+            paths_with_costs = {}
             
-            # Nếu không còn kho báu hoặc không tìm được đường đến kho báu nào,
-            # tìm đường đến công chúa
-            if princess_position:
-                # Kiểm tra nếu đường đi đã được preload
-                if princess_position in preloaded_paths and start_pos in preloaded_paths[princess_position]:
-                    path = preloaded_paths[princess_position][start_pos]
-                    path = path[::-1]  # Đảo ngược vì preload từ công chúa đến người chơi
+            # Kiểm tra đường đi đến các kho báu
+            for treasure in treasures:
+                end_pos = (treasure.xcor(), treasure.ycor())
+                # Tìm đường đi từ preloaded_paths hoặc tính toán mới
+                path = None
+                if start_pos in preloaded_paths and end_pos in preloaded_paths[start_pos]:
+                    path = preloaded_paths[start_pos][end_pos]
+                elif end_pos in preloaded_paths and start_pos in preloaded_paths[end_pos]:
+                    path = preloaded_paths[end_pos][start_pos][::-1]  # Đảo ngược
                 else:
-                    # Tính toán đường đi mới nếu chưa được preload
-                    path = bfs.bfs(map_level, start_pos, princess_position, walls)
+                    path = bfs.bfs(map_level, start_pos, end_pos, walls)
                 
                 if path:
-                    # Hiển thị đường đi đến công chúa
-                    show_path(path)
-                    return
+                    paths_with_costs[end_pos] = {
+                        'path': path,
+                        'cost': len(path),  # Chi phí là độ dài đường đi
+                        'type': 'treasure'
+                    }
+            
+            # Kiểm tra đường đi đến công chúa nếu tất cả kho báu đã được thu thập
+            if not treasures or (len(treasures) == 0):
+                if princess_position:
+                    # Tìm đường đi đến công chúa
+                    path = None
+                    if start_pos in preloaded_paths and princess_position in preloaded_paths[start_pos]:
+                        path = preloaded_paths[start_pos][princess_position]
+                    elif princess_position in preloaded_paths and start_pos in preloaded_paths[princess_position]:
+                        path = preloaded_paths[princess_position][start_pos][::-1]  # Đảo ngược
+                    else:
+                        path = bfs.bfs(map_level, start_pos, princess_position, walls)
+                    
+                    if path:
+                        paths_with_costs[princess_position] = {
+                            'path': path,
+                            'cost': len(path),
+                            'type': 'princess'
+                        }
+            
+            # Tìm đường đi có chi phí thấp nhất
+            if paths_with_costs:
+                min_cost = float('inf')
+                best_path = None
+                best_target = None
+                best_type = None
+                
+                for target, info in paths_with_costs.items():
+                    if info['cost'] < min_cost:
+                        min_cost = info['cost']
+                        best_path = info['path']
+                        best_target = target
+                        best_type = info['type']
+                
+                # Hiển thị thông báo cho người chơi
+                message = turtle.Turtle()
+                message.hideturtle()
+                message.penup()
+                message.goto(0, 330)
+                message.color("yellow")
+                                
+                # Hiển thị đường đi tốt nhất
+                show_path(best_path)
+                
+                # Xóa thông báo sau 3 giây
+                turtle.ontimer(message.clear, 3000)
+            else:
+                # Không tìm thấy đường đi nào
+                message = turtle.Turtle()
+                message.hideturtle()
+                message.penup()
+                message.goto(0, 330)
+                message.color("red")
+                message.write("Không tìm được đường đi!", align="center", font=("Arial", 12, "bold"))
+                turtle.ontimer(message.clear, 3000)
 
     # Hàm để hiển thị đường đi
     def show_path(path):
